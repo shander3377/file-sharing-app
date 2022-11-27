@@ -1,0 +1,258 @@
+<<<<<<< HEAD
+# [TASK ALERT]Rmove all formats statements, and change them to +, as it is more readable.
+import yake, string, nltk, requests, json, re, heapq, sys, os, time, glob
+=======
+import yake, string, nltk, requests, json, re, heapq, sys, os, time
+>>>>>>> b8e73fa4f176bba06aaef7a863033025a4c6ffc9
+from nltk.corpus import stopwords
+from nltk.tokenize import sent_tokenize, word_tokenize
+from datetime import date
+import base64
+from jmd_imagescraper.core import *
+from pathlib import Path
+
+def summarization(content_blob):
+  # Input text - to summarize
+  text = content_blob
+
+  # Tokenizing the text
+  stopWords = set(stopwords.words("english"))
+  words = word_tokenize(text)
+
+  # Creating a frequency table to keep the
+  # score of each word
+
+  freqTable = dict()
+  for word in words:
+    word = word.lower()
+    if word in stopWords:
+      continue
+    if word in freqTable:
+      freqTable[word] += 1
+    else:
+      freqTable[word] = 1
+
+  # Creating a dictionary to keep the score
+  # of each sentence
+  sentences = sent_tokenize(text)
+  sentenceValue = dict()
+
+  for sentence in sentences:
+    for word, freq in freqTable.items():
+      if word in sentence.lower():
+        if sentence in sentenceValue:
+          sentenceValue[sentence] += freq
+        else:
+          sentenceValue[sentence] = freq
+
+  sumValues = 0
+  for sentence in sentenceValue:
+    sumValues += sentenceValue[sentence]
+
+  # Average value of a sentence from the original text
+
+  average = int(sumValues / len(sentenceValue))
+
+  # Storing sentences into our summary.
+  summary = ''
+  for sentence in sentences:
+    if (sentence in sentenceValue) and (sentenceValue[sentence] > (1.2 * average)):
+      summary += " " + sentence
+  return summary
+
+def top_keywords(content_blob):
+  keyword_extractor = yake.KeywordExtractor(top=5, stopwords=None)
+  keywords = keyword_extractor.extract_keywords(content_blob)
+  for keyword, v in keywords:
+    print("Keyphrase: ",keyword, ": score", v)
+    return keywords
+
+all_keywords = []
+
+def keywords_pipeline(content_blob,N_values):
+
+    top_keywords_list = top_keywords(content_blob)
+    # Keyword = top_keywords_list[:N_values][0][0]
+    title = top_keywords_list[:N_values][0][0]
+    for keywordls in top_keywords_list[:N_values]:
+      for keyword in keywordls[0].split(" "):
+        all_keywords.append(keyword)
+    return title
+
+def text_highlighting(content_blob, all_keywords):
+  word = ""
+  fortext = ""
+  x = content_blob.split(" ")
+  for word in x:
+    word2 = word.translate(str.maketrans('', '', string.punctuation))
+    if word2 in all_keywords:
+      fortext += ("<span class='text-danger fw-bold'>"+word+ "</span>")
+    else:
+      fortext += (word+" ")
+  return fortext
+
+def save_write(title, Keyword, img_data):
+    d2 = date.today().strftime("%B %d, %Y")
+    f = open("Automation_Hi.html", "w")
+    f.write('<!DOCTYPE html>\n')
+    f.write('<html lang="en" class="h-100">\n')
+    f.write('<head>\n')
+    f.write('  <meta charset="UTF-8">\n')
+    # Pass your title here
+    f.write('  <title>'+title+'</title>\n')
+    f.write('  <meta charset="utf-8">\n')
+    f.write('<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> \n <link rel=\'stylesheet\' href=\'https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css\'>\n')
+    f.write('<link rel=\'stylesheet\' href=\'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css\'>\n')
+    f.write('</head>\n')
+    f.write('<body>\n')
+    f.write('<div class="card" style="width: 450px;" id="news">\n')
+    f.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>\n')
+    f.write('<div id="image" style="background-color:white">\n')
+    f.write('  <img src='+img_data+ 'style="height: 250px; object-fit: cover;" class="card-img-top" alt="...">\n')
+    f.write('</div>\n')
+
+    f.write('  <div class="card-body">\n')
+
+    # Pass your heading heading here
+    f.write('<center>    <h3 class="card-title">'+Keyword+'</h3> </center>')
+
+    # Pass your text here
+    fortext = '<p class="card-text">'
+    text_highlighting()
+    f.write(fortext)
+    f.write('</p></center>\n')
+    f.write('  </div>\n')
+    f.write('    <div class="card-footer text-muted">\n')
+    # Date cane be autogenrated here:
+    f.write('      <span style="float:left">'+d2+'</span>\n')
+    f.write('      <span style="float:right">@csvoyager</span>\n')
+    f.write('  </div>\n')
+    f.write('</div>\n')
+    f.write('''<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.js" integrity="sha512-sn/GHTj+FCxK5wam7k9w4gPPm6zss4Zwl/X9wgrvGMFbnedR8lTUSLdsolDRBRzsX6N+YgG6OWyvn9qaFVXH9w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src='https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.5/dist/umd/popper.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js'></script>
+    <script src='https://unpkg.com/headroom.js/dist/headroom.min.js'></script>
+    <script>
+    var node = document.getElementById('news');
+    domtoimage.toJpeg(node, { quality: 0.95 })
+        .then(function (dataUrl) {
+            var link = document.createElement('a');
+            link.download = 'my-image-name.jpeg';
+            link.href = dataUrl;
+            link.click();
+        });
+    </script>
+    </body>
+    </html>
+    ''')
+
+    f.close()
+
+def generate_card(title, date, hilighted_text, img_data):
+    # [TASK ALERT] REMOVE UNNEC PARTS: Apart from the div itself nothing else should be present
+    msg_html=""
+    msg_html+=('<!DOCTYPE html>\n')
+    msg_html+=('<html lang="en" class="h-100">\n')
+    msg_html+=('<head>\n')
+    msg_html+=('  <meta charset="UTF-8">\n')
+    msg_html+=('  <title>'+str(title)+'</title>\n')
+    msg_html+=('  <meta charset="utf-8">\n')
+    msg_html+=('<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> \n <link rel=\'stylesheet\' href=\'https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css\'>\n')
+    msg_html+=('<link rel=\'stylesheet\' href=\'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css\'>\n')
+    msg_html+=('</head>\n')
+    msg_html+=('<body>\n')
+    msg_html+=('<div class="card" style="width: 450px;" id="news">\n')
+    msg_html+=('<script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>\n')
+    msg_html+=('<div id="image" style="background-color:white">\n')
+    msg_html+=('  <img src="data:image/jpeg;base64,'+str(img_data)+ 'style="height: 250px; object-fit: cover;" class="card-img-top" alt="...">\n')
+    msg_html+=('</div>\n')
+    msg_html+=('  <div class="card-body">\n')
+    msg_html+=('<center>    <h3 class="card-title">'+title+'</h3> </center>')
+    msg_html+=('<p class="card-text">')
+    msg_html+= str(hilighted_text)
+    msg_html+=('</p></center>\n')
+    msg_html+=('  </div>\n')
+    msg_html+=('    <div class="card-footer text-muted">\n')
+    msg_html+=('      <span style="float:left">'+date+'</span>\n')
+    msg_html+=('      <span style="float:right">@csvoyager</span>\n')
+    msg_html+=('  </div>\n')
+    msg_html+=('</div>\n')
+    msg_html+=('''<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.js" integrity="sha512-sn/GHTj+FCxK5wam7k9w4gPPm6zss4Zwl/X9wgrvGMFbnedR8lTUSLdsolDRBRzsX6N+YgG6OWyvn9qaFVXH9w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src='https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.5/dist/umd/popper.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js'></script>
+    <script src='https://unpkg.com/headroom.js/dist/headroom.min.js'></script>
+    <script>
+    var node = document.getElementById('news');
+    domtoimage.toJpeg(node, { quality: 0.95 })
+        .then(function (dataUrl) {
+            var link = document.createElement('a');
+            link.download = 'my-image-name.jpeg';
+            link.href = dataUrl;
+            link.click();
+        });
+    </script>
+    </body>
+    </html>
+    ''')
+    return msg_html
+
+def download_image(Keywords, N):
+  #Download images
+  root = Path().cwd()/"downloaded_images"
+  duckduckgo_search(root, "pictures",str(Keywords[0][0]), max_results=N)
+  folder_path = str(os.getcwd())+"\downloaded_images\pictures\\"
+  time.sleep(2)
+  file_type = r'\*jpg'
+  files = glob.glob(folder_path + file_type)
+  files = sorted(files, key = os.path.getmtime)
+  datarr = []
+  for x in range(1,N+1):
+   old_file_path = files[-x]
+   new_file_path = str(os.getcwd())+"\downloaded_images\pictures\\"+str(Keywords[0][0])
+   count = 0
+   while os.path.exists(new_file_path+str(count)+".jpg"):
+    count+=1
+   new_file_path = new_file_path+str(count)+".jpg"
+   os.rename(old_file_path,new_file_path)
+   with open("downloaded_images/pictures/"+str(Keywords[0][0])+str(count)+".jpg", "rb") as image_file:
+    encoded_string = base64.b64encode(image_file.read())
+    data = encoded_string.decode()
+    datarr.append(data)
+    # datarr.append(new_file_path)
+
+
+  return datarr
+    
+  # print(Keywords)
+  # Converting the files into base 64
+  with open("downloaded_images/pictures/"+str(Keywords[0][0])+"0.jpg", "rb") as image_file:
+      encoded_string = base64.b64encode(image_file.read())
+  data = encoded_string.decode()
+  # print(data)
+def main(content_blob):
+    N = 4
+    summary = summarization(content_blob)
+    all_keywords = top_keywords(content_blob)
+    title = keywords_pipeline(content_blob,3)
+    hilighted_text = text_highlighting(summary,all_keywords)
+
+    img_data = download_image(all_keywords,N)
+
+    today_date = date.today()
+    today_date = today_date.strftime("%B %d, %Y")
+
+    # [TASK ALERT] MULTIPLE CARDS: Put this in a loop and a make a list, thats contains 3 diffrent msg HTML based on the same content_blob.
+    msg_html = []
+    html = ''
+
+    for i in range(N):
+      if(i<=3):
+
+        # print(img_data[i])
+        htmls = generate_card(title=title, hilighted_text=hilighted_text, date=today_date, img_data=img_data[i])
+        msg_html.append(htmls)
+    for data in msg_html:
+      html += ' '+ data
+    return html
